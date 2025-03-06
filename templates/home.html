@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center my-5">
+    <h1 class="display-4">Welcome to Speech Recognition and Synthesis</h1>
+    <p class="lead">A powerful web application for speech-to-text, text-to-speech, and YouTube transcription.</p>
+    <button id="getStartedBtn" class="btn btn-primary btn-lg mt-3">Get Started</button>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h5 class="card-title">Speech-to-Text</h5>
+                <p class="card-text">Convert live speech or audio files into text effortlessly.</p>
+                <a href="{% url 'speech_to_text' %}" class="btn btn-outline-primary">Try Now</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h5 class="card-title">Text-to-Speech</h5>
+                <p class="card-text">Convert text or files into natural-sounding speech.</p>
+                <a href="{% url 'text_to_speech' %}" class="btn btn-outline-primary">Try Now</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h5 class="card-title">YouTube Transcription</h5>
+                <p class="card-text">Transcribe the audio from YouTube videos into text.</p>
+                <a href="{% url 'youtube_transcription' %}" class="btn btn-outline-primary">Try Now</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

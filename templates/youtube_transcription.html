@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>YouTube Transcription</h1>
+
+<form method="POST">
+    {% csrf_token %}
+    <label for="video_url">Enter YouTube Video URL:</label>
+    <input type="url" name="video_url" id="video_url" required>
+    <button type="submit">Transcribe</button>
+</form>
+
+{% if error %}
+<p style="color: red;">{{ error }}</p>
+{% endif %}
+
+{% if text %}
+<h3>Transcription</h3>
+<textarea id="text" rows="20" cols="100" readonly>{{ text }}</textarea>  <!-- Display the transcription -->
+{% endif %}
+{% endblock %}

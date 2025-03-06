@@ -1,0 +1,108 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Recognition and Synthesis</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Speech App</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'speech_to_text' %}">Speech-to-Text</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'text_to_speech' %}">Text-to-Speech</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'youtube_transcription' %}">YouTube Transcription</a>
+                    </li>
+                </ul>
+                <div id="voice-command-toggle" class="mic-icon" style="cursor: pointer;">
+                    <i class="fas fa-microphone-slash fa-2x text-secondary"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-3 mt-4">
+        <p>&copy; 2025 SpeechRecognitionandSynthesis. All rights reserved.</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const micIcon = document.getElementById("voice-command-toggle").querySelector("i");
+            let micActive = false;
+    
+            document.getElementById("voice-command-toggle").addEventListener("click", function () {
+                micActive = !micActive; // Toggle state
+    
+                if (micActive) {
+                    micIcon.classList.remove("fa-microphone-slash", "text-secondary");
+                    micIcon.classList.add("fa-microphone", "text-danger");
+    
+                    // Start speech recognition
+                    startRecognition();
+                } else {
+                    micIcon.classList.remove("fa-microphone", "text-danger");
+                    micIcon.classList.add("fa-microphone-slash", "text-secondary");
+                }
+            });
+    
+            function startRecognition() {
+                fetch("/process-voice-command/")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.intent) {
+                        handleIntent(data.intent);
+                    }
+                })
+                .catch(error => console.error("Error:", error));
+            }
+    
+            function handleIntent(intent) {
+                if (intent === "navigate_stt") {
+                    window.location.href = "{% url 'speech_to_text' %}";
+                } else if (intent === "navigate_tts") {
+                    window.location.href = "{% url 'text_to_speech' %}";
+                } else if (intent === "navigate_yt") {
+                    window.location.href = "{% url 'youtube_transcription' %}";
+                } else if (intent === "start_transcription") {
+                    console.log("Starting transcription...");
+                } else if (intent === "stop_transcription") {
+                    console.log("Stopping transcription...");
+                } else if (intent === "upload_transcribe") {
+                    console.log("Uploading and transcribing...");
+                } else if (intent === "translate_text") {
+                    console.log("Translating text...");
+                } else if (intent === "playback_audio") {
+                    console.log("Playing back audio...");
+                }
+            }
+        });
+    </script>
+</body>
+</html>
