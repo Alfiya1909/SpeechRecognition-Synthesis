@@ -1,3 +1,56 @@
+function sendToServer(transcript, selectedLanguage = "en", targetLanguage = "en") {
+    console.log("📤 Sending to server:", transcript, selectedLanguage, targetLanguage);
+
+    if (!transcript) {
+        console.error("❌ Error: No transcription data to send.");
+        return;
+    }
+
+    fetch("/speech_to_text/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": getCSRFToken(),
+        },
+        body: new URLSearchParams({
+            transcription: transcript,
+            language: selectedLanguage,
+            target_language: targetLanguage,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("✅ Server Response:", data);
+
+        // ✅ Update the UI with the translated text
+        let translatedTextElement = document.getElementById("translatedText");
+        if (translatedTextElement) {
+            translatedTextElement.innerText = data.translated_text || "Translation failed";
+        } else {
+            console.error("❌ Translated text element not found!");
+        }
+    })
+    .catch(error => console.error("❌ Fetch Error:", error));
+}
+
+// Ensure getCSRFToken() works
+function getCSRFToken() {
+    let cookieValue = null;
+    document.cookie.split(";").forEach((cookie) => {
+        let trimmedCookie = cookie.trim();
+        if (trimmedCookie.startsWith("csrftoken=")) {
+            cookieValue = trimmedCookie.substring("csrftoken=".length);
+        }
+    });
+    return cookieValue || "";
+}
+
+// ✅ Ensure `sendToServer` is accessible globally
+window.sendToServer = sendToServer;
+
+// ✅ Test if function is accessible
+console.log("✅ sendToServer is loaded:", typeof window.sendToServer);
+
 document.addEventListener("DOMContentLoaded", function () {
     let isRecording = false;
     let isVoiceCommandsActive = false;
@@ -54,15 +107,31 @@ document.addEventListener("DOMContentLoaded", function () {
             startRecordingButton.addEventListener("click", function () {
                 if (!isRecording) {
                     navigator.mediaDevices.getUserMedia({ audio: true })
-                        .then(() => recognition.start())
+                        .then((stream) => {
+                            console.log("🎤 Microphone access granted!", stream);
+                            
+                            // ✅ Store stream to stop it later
+                            window.activeStream = stream;
+            
+                            recognition.start();
+                            console.log("🎤 Recording started...");
+                        })
                         .catch(err => {
                             console.error("❌ Microphone access error:", err);
                             alert("⚠️ Please allow microphone access in your browser settings.");
                         });
                 } else {
                     recognition.stop();
+            
+                    // ✅ Stop the microphone stream properly
+                    if (window.activeStream) {
+                        let tracks = window.activeStream.getTracks();
+                        tracks.forEach(track => track.stop()); // Stop each track
+                        console.log("🎤 Microphone access released.");
+                    }
                 }
-            });
+            });                      
+            
         } else {
             console.error("❌ Error: Start Recording button not found.");
         }
@@ -145,38 +214,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function sendToServer(transcript, selectedLanguage, targetLanguage) {
-        fetch("/speech_to_text/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "X-CSRFToken": getCSRFToken(),
-            },
-            body: new URLSearchParams({
-                transcription: transcript,
-                language: selectedLanguage,
-                target_language: targetLanguage,
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (transcriptionElement) transcriptionElement.innerText = data.transcription || "⚠️ Error transcribing";
-            if (translatedTextElement) translatedTextElement.innerText = data.translated_text || "⚠️ Translation failed";
-        })
-        .catch(error => console.error("❌ Error:", error));
-    }
-
-    function getCSRFToken() {
-        let cookieValue = null;
-        document.cookie.split(";").forEach((cookie) => {
-            let trimmedCookie = cookie.trim();
-            if (trimmedCookie.startsWith("csrftoken=")) {
-                cookieValue = trimmedCookie.substring("csrftoken=".length);
-            }
-        });
-        return cookieValue || "";
-    }
 });
+
 
 // Convert Text to Speech with Translation
 document.getElementById('convertToSpeech').addEventListener('click', function() {

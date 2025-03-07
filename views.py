@@ -1,3 +1,4 @@
+import html
 import json
 import os
 import time
@@ -158,37 +159,39 @@ logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def speech_to_text(request):
-    """Handles both rendering and live speech recognition."""
     if request.method == "POST":
-        try:
-            recognizer = sr.Recognizer()
+        transcription = request.POST.get("transcription", "").strip()
+        language = request.POST.get("language", "en")
+        target_language = request.POST.get("target_language", "").strip()
 
-            with sr.Microphone() as source:  # Removed device_index to auto-detect
-                recognizer.adjust_for_ambient_noise(source)
-                print("Listening... Speak now.")
-                
-                # Added timeout and phrase_time_limit
-                audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
+        print(f"Received Transcription: {transcription}")
+        print(f"Source Language: {language}, Target Language: {target_language}")
 
-            # Convert audio to format required by Wav2Vec2
-            audio_data = np.frombuffer(audio.get_wav_data(), dtype=np.int16)
-            audio_data = torch.tensor(audio_data, dtype=torch.float32).unsqueeze(0) / 32768.0
-            input_values = processor(audio_data, return_tensors="pt", padding=True).input_values
+        if not transcription:
+            return JsonResponse({"error": "No transcription received"}, status=400)
 
-            with torch.no_grad():
-                logits = model(input_values).logits
+        translated_text = None
+        if target_language and target_language != language:
+            try:
+                translate_client = translate.Client()
+                translation_result = translate_client.translate(
+                    transcription, 
+                    target_language=target_language
+                )
+                translated_text = html.unescape(translation_result["translatedText"])
+            except Exception as e:
+                return JsonResponse({"error": f"Translation failed: {str(e)}"}, status=500)
 
-            predicted_ids = torch.argmax(logits, dim=-1)
-            text = processor.batch_decode(predicted_ids)[0]
+            except Exception as e:
+                print(f"Translation Error: {e}")
+                return JsonResponse({"error": f"Translation failed: {str(e)}"}, status=500)
 
-            return JsonResponse({"transcription": text})
+        response_data = {
+            "transcription": transcription,
+            "translated_text": translated_text or "No translation requested",
+        }
 
-        except sr.WaitTimeoutError:
-            return JsonResponse({"error": "Listening timeout reached. Please try again."}, status=400)
-
-        except Exception as e:
-            print(f"Error: {e}")  # Logs error
-            return JsonResponse({"error": f"Speech recognition failed: {str(e)}"}, status=500)
+        return JsonResponse(response_data)
 
     return render(request, "speech_to_text.html")
 

@@ -5,23 +5,6 @@
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         <label>Enter Text:</label>
-        <label for="source_language">Source Language:</label>
-        <select name="source_language" class="form-control">
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="it">Italian</option>
-        </select>
-
-        <label for="target_language">Target Language:</label>
-        <select name="target_language" class="form-control">
-            <option value="en">English</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="it">Italian</option>
-        </select>
 
         <textarea name="text" class="form-control"></textarea>
         <button type="submit" class="btn btn-primary mt-2">Convert to Speech</button>
