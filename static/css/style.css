@@ -68,3 +68,40 @@ footer {
 .mic-icon i {
     font-size: 24px;
 }
+
+
+.profile-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin-left: 15px;  
+}
+.profile-icon {
+    font-size: 40px;
+    color: white;
+}
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 40px;
+    right: 0;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 120px;
+    z-index: 10;
+}
+.dropdown-menu button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 16px;
+}
+.dropdown-menu button:hover {
+    background: #f1f1f1;
+}

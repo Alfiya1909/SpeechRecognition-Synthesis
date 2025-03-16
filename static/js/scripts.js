@@ -262,3 +262,24 @@ function getCSRFToken() {
     }
     return cookieValue;
 }
+
+
+function toggleDropdown() {
+    var dropdown = document.getElementById("dropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+}
+
+function logout() {
+    alert("Logging out...");  
+    window.location.href = "/logout";  
+}
+
+// Hide dropdown when clicking outside
+document.addEventListener("click", function(event) {
+    var profileContainer = document.querySelector(".profile-container");
+    var dropdown = document.getElementById("dropdown");
+
+    if (!profileContainer.contains(event.target)) {
+        dropdown.style.display = "none";
+    }
+});

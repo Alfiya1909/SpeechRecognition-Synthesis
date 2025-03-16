@@ -1,0 +1,57 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup Form</title>
+    <!-- Linking external CSS -->
+    <link rel="stylesheet" href="{% static 'css/register.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="login">
+            <div class="header">
+                <span>Join us today!</span>
+                <p>Sign up now to become a member.</p>
+            </div>
+            <form id="register" action="{% url 'register' %}" method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <input type="text" name="first_last_name" placeholder="Enter First & Last Name" required 
+                           pattern="^[A-Za-z]+(\s[A-Za-z]+)+$" 
+                           title="Please enter your first and last name (at least two words)" />
+                </div>
+                <div class="row">
+                    <input type="mobile" name="mobile_number" placeholder="+ Country Code Mobile Number" required pattern="^\+\d{1,3}\s?\d{4,14}$" />
+                    <input type="email" name="email" placeholder="Enter Email" required />
+                </div>
+                <div class="row">
+                    <select name="gender" required>
+                        <option value="">Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="others">Others</option>
+                      </select>
+                    <input type="number" name="age" placeholder="Enter Age" required />
+                </div>
+                <div class="row">
+                    <input type="text" name="country" placeholder="Enter Country" required />
+                    <input type="number" name="zip_code" placeholder="Enter Zip Code" required />
+                </div>
+                <div class="row">
+                    <input type="password" name="password" id="password" placeholder="Choose A Password" required />
+                </div>
+                <div class="row">
+                    <input type="password" name="confirm_password" id="confrim_password" placeholder="Re-Enter Password" required />
+                </div>
+                <p id="error_message" style="color: red; display: none;">Passwords do not match!</p>
+                <input type="submit" value="Signup" />
+                <span> Already a member? <a href="{% url 'login' %}">Login Here</a></span>
+            </form>
+        </div>
+    </div>
+    <script src="{% static 'js/register.js' %}"></script>
+</body>
+</html>

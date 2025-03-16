@@ -9,10 +9,11 @@ urlpatterns = [
     path('text_to_speech/', views.text_to_speech, name='text_to_speech'),
     path('youtube_transcription/', views.youtube_transcription, name='youtube_transcription'),
     path('translate_text/', views.translate_text, name='translate_text'),
-    path('handle_voice_command/', views.handle_voice_command, name='handle_voice_command'),
     path("start-voice-recognition/", views.start_voice_recognition, name="start_voice_recognition"),
     path("stop-voice-recognition/", views.stop_voice_recognition, name="stop_voice_recognition"),
     path("process-voice-command/", views.process_voice_command, name="process_voice_command"),
+    path("register/", views.register, name="register"),
+    path("login/", views.user_login, name="login"),
 
 ]
 

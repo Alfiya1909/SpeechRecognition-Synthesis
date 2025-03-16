@@ -74,7 +74,13 @@ def transcribe_audio(audio_path):
         return None
 
 def text_to_speech(text, output_path):
-    """Convert text to speech using Hugging Face SpeechT5."""
+    """Convert text to speech using Hugging Face SpeechT5.
+    Args:
+        text (str): Input text to be converted to speech.
+        output_path (str): Path to save the generated audio file.
+    Returns:
+        str: File path of the generated audio.
+    """
     logging.info(f"Converting text to speech: {text}")
     try:
         if not text.strip():

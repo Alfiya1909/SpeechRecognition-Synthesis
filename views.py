@@ -23,6 +23,12 @@ import torch
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, Wav2Vec2ForCTC
 import base64
 import io
+from .models import UserActivity, UserDetails, GuestUserActivity
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.hashers import make_password, check_password
+import uuid
 
 #Load the trained spaCy model
 nlp = spacy.load("trained_model")
@@ -38,9 +44,119 @@ model = Wav2Vec2ForCTC.from_pretrained(MODEL_NAME)
 recognizer = sr.Recognizer()
 mic = sr.Microphone()
 
+def register(request):
+    if request.method == "POST":
+        first_last_name = request.POST["first_last_name"]
+        mobile_number = request.POST["mobile_number"]
+        email = request.POST["email"]
+        age = request.POST["age"]
+        country = request.POST["country"]
+        zip_code = request.POST["zip_code"]
+        gender = request.POST["gender"]
+        password = request.POST["password"]
+        confirm_password = request.POST["confirm_password"]
+
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match!")
+            return redirect("register")
+        
+        if UserDetails.objects.filter(email=email).exists():
+            messages.error(request, "Email already registered!")
+            return redirect("register")
+
+        # Save user details with hashed password
+        user = UserDetails.objects.create(
+            first_last_name=first_last_name,
+            mobile_number=mobile_number,
+            email=email,
+            age=age,
+            country=country,
+            zip_code=zip_code,
+            gender=gender,
+            password=make_password(password),
+        )
+        user.save()
+
+        messages.success(request, "Registration successful! Please log in.")
+        return redirect("login")
+
+    return render(request, "register.html")
+
+def user_login(request):
+    if request.method == "POST":
+        email = request.POST["email"]
+        password = request.POST["password"]
+        user = UserDetails.objects.filter(email=email).first()
+
+        if user and check_password(password, user.password):
+            request.session["user_id"] = user.id
+
+            # Log activity
+            log_user_activity(request, "User logged in")
+
+            return redirect("home")  # Redirect to home after login
+        else:
+            messages.error(request, "Invalid credentials!")
+            return redirect("login")
+
+    return render(request, "login.html")
+
+def log_user_activity(request, action, transcripted_text=None, audio_output=None, youtube_video_url=None):
+    user_id = request.session.get("user_id")
+    
+    if user_id:
+        try:
+            user = UserDetails.objects.get(id=user_id)
+            activity = UserActivity(
+                user=user,
+                action=action,
+                transcripted_text=transcripted_text,
+                audio_output=audio_output,
+                youtube_video_url=youtube_video_url,
+            )
+            # Handle File Upload Properly
+            if audio_output:  # Ensure audio_output is a file and not a string path
+                file_name = os.path.basename(audio_output.name)
+                activity.audio_output.save(file_name, audio_output)
+            
+            activity.save()
+            return True  # Return success confirmation
+        except UserDetails.DoesNotExist:
+            return False  # User not found
+    return False  # User not logged in
+
+def log_guest_activity(request, action, transcripted_text=None, audio_output=None, youtube_video_url=None):
+    # Retrieve or generate a session ID
+    session_id = request.session.get("guest_id")
+    if not session_id:
+        session_id = str(uuid.uuid4())  # Generate unique ID
+        request.session["guest_id"] = session_id
+        request.session.modified = True  # Ensure session is saved
+
+    # Debugging - Print values before saving
+    print(f"Session ID: {session_id}, Action: {action}, Text: {transcripted_text}, Audio: {audio_output}, YouTube: {youtube_video_url}")
+
+    # Save guest activity to database
+    try:
+        guest_activity = GuestUserActivity.objects.create(
+            session_id=session_id,
+            action=action,
+            transcripted_text=transcripted_text,
+            audio_output=audio_output,
+            youtube_video_url=youtube_video_url
+        )
+        print("Guest activity saved successfully:", guest_activity)
+        return JsonResponse({"message": "Guest activity logged successfully!"})
+
+    except Exception as e:
+        print("Error saving guest activity:", e)
+        return JsonResponse({"error": "Failed to save guest activity"}, status=500)
+
 # Intent recognition function
 def recognize_intent(transcription):
     intent_mapping = {
+        "open home": "navigate_home",
+        "go to home": "navigate_home",
         "open speech to text": "navigate_stt",
         "go to speech to text": "navigate_stt",
         "start speech to text": "navigate_stt",
@@ -185,6 +301,10 @@ def speech_to_text(request):
             except Exception as e:
                 print(f"Translation Error: {e}")
                 return JsonResponse({"error": f"Translation failed: {str(e)}"}, status=500)
+            
+            log_user_activity(request, "Converted Speech to Text", transcripted_text=transcription)
+
+            log_guest_activity(request, "Used STT", transcripted_text=transcription)
 
         response_data = {
             "transcription": transcription,
@@ -251,6 +371,10 @@ def text_to_speech(request):
         except Exception as e:
             logger.error(f"TTS conversion failed: {str(e)}")
             return render(request, "text_to_speech.html", {"error": f"TTS conversion failed: {str(e)}"})
+        
+        log_user_activity(request, "Converted Text to Speech", transcripted_text=None)
+
+        log_guest_activity(request, "Converted Text to Speech", transcripted_text=None)
 
         return render(request, "text_to_speech.html", {"audio_file": f"/media/{audio_filename}"})
 
@@ -308,13 +432,19 @@ def youtube_transcription(request):
         # Debugging: Print what transcription returns
         logging.info(f"Transcription output: {transcription}")
 
+        transcription = process_youtube_transcription(video_url, download_audio_from_youtube)
+
         if not transcription:  # Check if transcription is empty or None
             return render(request, 'youtube_transcription.html', {'error': 'Transcription failed or returned empty text.'})
+        
+        log_guest_activity(request, "YouTube Video Transcribed", transcripted_text=transcription, youtube_video_url=video_url)
 
         # Step 3: Detect language (Ensure it does not return None)
         detected_language = detect_language(transcription)
         if not detected_language:  # Prevent NoneType error
             detected_language = "unknown"
+        
+        log_user_activity(request, "YouTube Video Transcribed", transcripted_text=transcription, youtube_video_url=video_url)
 
         # Step 4: Render results (without translation)
         return render(request, 'youtube_transcription.html', {
@@ -337,65 +467,12 @@ def youtube_transcription(request):
         return render(request, 'youtube_transcription.html', {
             'text': transcription
         })
+    
+    #log_user_activity(request, "YouTube Video Transcribed", transcripted_text=transcription, youtube_video_url=video_url)
+
     return render(request, 'youtube_transcription.html')
 
 def classify_command(text):
     #Predict the intent of the given text using the trained spaCy model.
     doc = nlp(text)
     return doc.cats #Return category score
-
-def handle_voice_command(request):
-    if request.method == "POST":
-        data = request.POST.get("command", "") #Get the text command from the request
-
-        if not data:
-            return JsonResponse({"error": "No command received"}, status=400)
-        
-        #Classify the command using the ML model
-        intent_scores = classify_command(data)
-        predicted_intent = max(intent_scores, key=intent_scores.get) #Get the highest scoring intent
-
-        #Process the intent and generate a response
-        response = process_intent(predicted_intent)
-
-        return JsonResponse({"intent": predicted_intent, "response": response})
-    
-def process_intent(intent):
-    #Return a response based on the detected intent.
-    if intent == "time":
-        return f"The current time is {datetime.now().strftime('%H:%M:%S')}"
-    elif intent == "date":
-        return f"Today's date is {datetime.now().strftime('%Y-%m-%d')}"
-    elif intent== "greeting":
-        return "Hello! How can I assist you?"
-    else:
-        return "Sorry, I didn't understand that"
-    
-def translate_speech(request):
-    if request.method == "POST":
-        transcription = request.POST.get("transcription", "").strip()
-        source_lang = request.POST.get("language", "en")
-        target_lang = request.POST.get("target_language", "en")
-
-        if not transcription:
-            return JsonResponse({"error": "No transcription provided"})
-
-        # Check if the transcribed text is a voice command
-        intent = classify_command(transcription)
-        print(f"Detected intent: {intent}")  # Debugging
-
-        response_text = None
-
-        if intent == "get_date":
-            response_text = f"Today's date is {datetime.now().strftime('%B %d, %Y')}."
-        elif intent == "get_time":
-            response_text = f"The current time is {datetime.now().strftime('%I:%M %p')}."
-        else:
-            # If it's not a command, translate the text
-            translated_text = translator.translate(transcription, source_language=source_lang, target_language=target_lang)["translatedText"]
-            return JsonResponse({"transcription": transcription, "translated_text": translated_text})
-
-        # Return AI assistant response instead of translation
-        return JsonResponse({"transcription": transcription, "translated_text": response_text})
-
-    return JsonResponse({"error": "Invalid request method."}, status=400)
