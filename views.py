@@ -29,6 +29,16 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.hashers import make_password, check_password
 import uuid
+import transformers
+import warnings
+import logging
+from transformers import logging as hf_logging
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
+hf_logging.set_verbosity_error()
+logging.getLogger().setLevel(logging.WARNING)
+
+transformers.logging.set_verbosity_error()
 
 #Load the trained spaCy model
 nlp = spacy.load("trained_model")
@@ -39,7 +49,7 @@ translator = translate.Client.from_service_account_json(settings.GOOGLE_TRANSLAT
 # Load the Wav2Vec2 Model
 MODEL_NAME = "facebook/wav2vec2-large-960h"
 processor = Wav2Vec2Processor.from_pretrained(MODEL_NAME)
-model = Wav2Vec2ForCTC.from_pretrained(MODEL_NAME)
+model = Wav2Vec2ForCTC.from_pretrained(MODEL_NAME, torch_dtype=torch.float32, use_safetensors=True)
 
 recognizer = sr.Recognizer()
 mic = sr.Microphone()
@@ -170,6 +180,9 @@ def recognize_intent(transcription):
         "upload and transcribe": "upload_transcribe",
         "translate this": "translate_text",
         "play the audio": "playback_audio",
+        "open login page": "navigate_login",
+        "go to open login page": "navigate_login",
+        "start login page": "navigate_login",
     }
 
     # Check if the spoken phrase matches any intent

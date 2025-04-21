@@ -89,7 +89,7 @@ def text_to_speech(text, output_path):
         
         inputs = tts_processor(text, return_tensors="pt").to(device)
         speaker_embeddings = torch.zeros((1, 512), device=device)  # Placeholder for embeddings
-        speech = tts_model.generate_speech(inputs["input_ids"], speaker_embeddings)
+        speech = tts_model.generate_speech(inputs["input_ids"], speaker_embeddings.to(device))
         sf.write(output_path, speech.cpu().numpy(), 16000)
         logging.info(f"Speech saved to: {output_path}")
     except Exception as e:
@@ -200,7 +200,8 @@ COMMANDS = {
     "stop": "stop_transcription",
     "upload the file and convert to text": "upload_transcribe",
     "translate text": "translate_text",
-    "playback audio": "playback_audio"
+    "playback audio": "playback_audio",
+    "open login page": "navigate_login"
 }
 
 def recognize_intent(text):
